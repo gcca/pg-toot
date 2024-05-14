@@ -1,0 +1,32 @@
+services:
+  primary:
+    image: postgres:16.2-alpine3.19
+    container_name: primary
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./primary/pg_hba.conf:/pg_hba.conf
+      - ./primary/primary.sh:/docker-entrypoint-initdb.d/primary.sh
+      - ./primary/primary.sql:/docker-entrypoint-initdb.d/primary.sql
+  secondary:
+    image: secondary
+    container_name: secondary
+    depends_on:
+      - primary
+  pgpool:
+    image: pgpool
+    container_name: pgpool
+    environment:
+      - PGPOOL_ADMIN_USERNAME=postgres
+      - PGPOOL_ADMIN_PASSWORD=postgres
+      - PGPOOL_SR_CHECK_USER=postgres
+      - PGPOOL_SR_CHECK_PASSWORD=postgres
+      - PGPOOL_POSTGRES_USERNAME=postgres
+      - PGPOOL_POSTGRES_PASSWORD=postgres
+      - PGPOOL_BACKEND_NODES=0:primary:5433,1:secondary:5434
+      - PGPOOL_ENABLE_LDAP=no
+    ports:
+      - "5432:5432"
+    depends_on:
+      - primary
+      - secondary
